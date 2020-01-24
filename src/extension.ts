@@ -66,6 +66,7 @@ import {
   DecorationTypeDidChange,
   DecorationsRangesDidChange
 } from "./decoration-protocol";
+import { proxyEnvFromProperties } from "./proxy";
 
 const outputChannel = window.createOutputChannel("Metals");
 const openSettingsAction = "Open settings";
@@ -110,7 +111,7 @@ function fetchAndLaunchMetals(context: ExtensionContext, javaHome: string) {
   if (dottyArtifact && fs.existsSync(dottyArtifact)) {
     outputChannel.appendLine(
       `Metals will not start since Dotty is enabled for this workspace. ` +
-        `To enable Metals, remove the file ${dottyArtifact} and run 'Reload window'`
+      `To enable Metals, remove the file ${dottyArtifact} and run 'Reload window'`
     );
     return;
   }
@@ -137,6 +138,9 @@ function fetchAndLaunchMetals(context: ExtensionContext, javaHome: string) {
 
   const javaOptions = getJavaOptions(workspace.workspaceFolders![0].uri.fsPath);
 
+  const allProps = serverProperties.concat(javaOptions)
+  const proxyEnv = proxyEnvFromProperties(allProps)
+
   const fetchProperties = serverProperties.filter(
     p => !p.startsWith("-agentlib")
   );
@@ -145,6 +149,9 @@ function fetchAndLaunchMetals(context: ExtensionContext, javaHome: string) {
     .get<string[]>("customRepositories")!
     .join("|");
 
+
+  const httpProxy = proxyEnv.get("http_proxy")
+  const httpProxyEnv = httpProxy == undefined ? {} : { http_proxy: httpProxy }
   const customRepositoriesEnv =
     customRepositories.length == 0
       ? {}
@@ -174,6 +181,8 @@ function fetchAndLaunchMetals(context: ExtensionContext, javaHome: string) {
     {
       env: {
         COURSIER_NO_TERM: "true",
+        JAVA_HOME: javaHome,
+        ...httpProxyEnv,
         ...customRepositoriesEnv,
         ...process.env
       }
