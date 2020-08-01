@@ -245,6 +245,11 @@
         "title": "Reset Choice Interactive"
       },
       {
+        "command": "metals.analyze-stacktrace",
+        "category": "Metals",
+        "title": "Analyze Stacktrace"
+      },
+      {
         "command": "metals.go-to-super-method",
         "category": "Metals",
         "title": "Go to super method"
@@ -319,6 +324,10 @@
         },
         {
           "command": "metals.super-method-hierarchy",
+          "when": "metals:enabled"
+        },
+        {
+          "command": "metals.analyze-stacktrace",
           "when": "metals:enabled"
         },
         {

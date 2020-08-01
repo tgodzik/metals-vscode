@@ -6,6 +6,7 @@ import {
   workspace,
   ExtensionContext,
   window,
+  env,
   commands,
   CodeLensProvider,
   EventEmitter,
@@ -438,8 +439,10 @@ function launchMetals(
         case "metals-goto-location":
           const location =
             params.arguments && (params.arguments[0] as Location);
+          const otherWindow =
+            (params.arguments && (params.arguments[1] as Boolean)) || false;
           if (location) {
-            gotoLocation(location);
+            gotoLocation(location, otherWindow);
           }
           break;
         case "metals-model-refresh":
@@ -538,6 +541,21 @@ function launchMetals(
         });
       }
     );
+
+    registerCommand("metals.analyze-stacktrace", () => {
+      env.clipboard.readText().then((clip) => {
+        if (clip.trim().length < 1) {
+          window.showInformationMessage(
+            "Clipboard appears to be empty, copy stacktrace to clipboard and retry this command"
+          );
+        } else {
+          client.sendRequest(ExecuteCommandRequest.type, {
+            command: "analyze-stacktrace",
+            arguments: [clip],
+          });
+        }
+      });
+    });
 
     registerCommand("metals.reset-choice-interactive", () => {
       client.sendRequest(ExecuteCommandRequest.type, {
@@ -735,18 +753,29 @@ function launchMetals(
   });
 }
 
-function gotoLocation(location: Location): void {
+function gotoLocation(location: Location, otherWindow: Boolean): void {
   const range = new Range(
     location.range.start.line,
     location.range.start.character,
     location.range.end.line,
     location.range.end.character
   );
-  workspace
-    .openTextDocument(Uri.parse(location.uri))
-    .then((textDocument) =>
-      window.showTextDocument(textDocument, { selection: range })
-    );
+  var vs = ViewColumn.Active;
+  if (otherWindow) {
+    vs = ViewColumn.Beside;
+    if (window.visibleTextEditors.length > 1) {
+      vs =
+        window.visibleTextEditors
+          .filter((vte) => vte != window.activeTextEditor && vte.viewColumn)
+          .pop()?.viewColumn || ViewColumn.Beside;
+    }
+  }
+  workspace.openTextDocument(Uri.parse(location.uri)).then((textDocument) =>
+    window.showTextDocument(textDocument, {
+      selection: range,
+      viewColumn: vs,
+    })
+  );
 }
 
 function trackDownloadProgress(
