@@ -189,6 +189,8 @@ function fetchAndLaunchMetals(context: ExtensionContext, javaHome: string) {
     ? serverVersionConfig.trim()
     : defaultServerVersion;
 
+  outputChannel.appendLine(`Metals version: ${serverVersion}`);
+
   const serverProperties = config.get<string[]>("serverProperties")!;
   const customRepositories = config.get<string[]>("customRepositories")!;
 
@@ -344,6 +346,8 @@ function launchMetals(
 
   return client.onReady().then(() => {
     let doctor: WebviewPanel | undefined;
+    let stacktrace: WebviewPanel | undefined;
+
     function getDoctorPanel(isReload: boolean): WebviewPanel {
       if (!doctor) {
         doctor = window.createWebviewPanel(
@@ -361,6 +365,23 @@ function launchMetals(
       }
       return doctor;
     }
+    function getStacktracePanel(): WebviewPanel {
+      if (!stacktrace) {
+        stacktrace = window.createWebviewPanel(
+          "metals-stacktrace",
+          "Analyze Stacktrace",
+          ViewColumn.Beside,
+          { enableCommandUris: true }
+        );
+        context.subscriptions.push(stacktrace);
+        stacktrace.onDidDispose(() => {
+          stacktrace = undefined;
+        });
+      }
+      stacktrace.reveal();
+      return stacktrace;
+    }
+
     [
       "build-import",
       "build-restart",
@@ -459,6 +480,13 @@ function launchMetals(
             );
           }
           break;
+        case "metals-show-stacktrace":
+          const html = params.arguments && params.arguments[0];
+          if (typeof html === "string") {
+            const panel = getStacktracePanel();
+            panel.webview.html = html;
+          }
+          break;
         case "metals-doctor-run":
         case "metals-doctor-reload":
           const isRun = params.command === "metals-doctor-run";
@@ -555,6 +583,16 @@ function launchMetals(
           });
         }
       });
+    });
+
+    registerCommand("metals.goto-path-uri", (...args) => {
+      const uri = args[0] as string;
+      const line = args[1] as number;
+      const otherWindow = args[2] as boolean;
+      const pos = new Position(line, 0);
+      const range = new Range(pos, pos);
+      const location = Location.create(uri, range);
+      gotoLocation(location, otherWindow);
     });
 
     registerCommand("metals.reset-choice-interactive", () => {
@@ -762,13 +800,14 @@ function gotoLocation(location: Location, otherWindow: Boolean): void {
   );
   var vs = ViewColumn.Active;
   if (otherWindow) {
-    vs = ViewColumn.Beside;
-    if (window.visibleTextEditors.length > 1) {
-      vs =
-        window.visibleTextEditors
-          .filter((vte) => vte != window.activeTextEditor && vte.viewColumn)
-          .pop()?.viewColumn || ViewColumn.Beside;
-    }
+    vs =
+      window.visibleTextEditors
+        .filter(
+          (vte) =>
+            window.activeTextEditor?.document.uri.scheme != "output" &&
+            vte.viewColumn
+        )
+        .pop()?.viewColumn || ViewColumn.Beside;
   }
   workspace.openTextDocument(Uri.parse(location.uri)).then((textDocument) =>
     window.showTextDocument(textDocument, {
