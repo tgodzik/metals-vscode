@@ -6,7 +6,6 @@ import {
   workspace,
   ExtensionContext,
   window,
-  env,
   commands,
   CodeLensProvider,
   EventEmitter,
@@ -347,6 +346,7 @@ function launchMetals(
   return client.onReady().then(() => {
     let doctor: WebviewPanel | undefined;
     let stacktrace: WebviewPanel | undefined;
+    let lastTraces: Array<string> = [];
 
     function getDoctorPanel(isReload: boolean): WebviewPanel {
       if (!doctor) {
@@ -571,18 +571,19 @@ function launchMetals(
     );
 
     registerCommand("metals.analyze-stacktrace", () => {
-      env.clipboard.readText().then((clip) => {
-        if (clip.trim().length < 1) {
-          window.showInformationMessage(
-            "Clipboard appears to be empty, copy stacktrace to clipboard and retry this command"
-          );
-        } else {
-          client.sendRequest(ExecuteCommandRequest.type, {
-            command: "analyze-stacktrace",
-            arguments: [clip],
-          });
-        }
-      });
+      // TODO we should split possibel multiple traces
+      let clip = lastTraces.join("");
+      console.log(clip);
+      if (clip.trim().length < 1) {
+        window.showInformationMessage(
+          "Clipboard appears to be empty, copy stacktrace to clipboard and retry this command"
+        );
+      } else {
+        client.sendRequest(ExecuteCommandRequest.type, {
+          command: "analyze-stacktrace",
+          arguments: [clip],
+        });
+      }
     });
 
     registerCommand("metals.goto-path-uri", (...args) => {
@@ -759,9 +760,9 @@ function launchMetals(
     );
     treeViews = startTreeView(client, outputChannel, context, viewIds);
     context.subscriptions.concat(treeViews.disposables);
-    scalaDebugger
-      .initialize(outputChannel)
-      .forEach((disposable) => context.subscriptions.push(disposable));
+    let [disposable, traces] = scalaDebugger.initialize(outputChannel);
+    lastTraces = traces;
+    disposable.forEach((disposable) => context.subscriptions.push(disposable));
     client.onNotification(DecorationTypeDidChange.type, (options) => {
       decorationType = window.createTextEditorDecorationType(options);
     });

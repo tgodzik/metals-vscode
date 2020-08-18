@@ -11,17 +11,27 @@ export const startAdapterCommand = "debug-adapter-start";
 const configurationType = "scala";
 const launchRequestType = "launch";
 
-export function initialize(outputChannel: vscode.OutputChannel): Disposable[] {
+export function initialize(
+  outputChannel: vscode.OutputChannel
+): [Disposable[], Array<string>] {
   outputChannel.appendLine("Initializing Scala Debugger");
+  let traces: Array<string> = [];
   return [
-    vscode.debug.registerDebugConfigurationProvider(
-      configurationType,
-      new ScalaConfigProvider()
-    ),
-    vscode.debug.registerDebugAdapterDescriptorFactory(
-      configurationType,
-      new ScalaDebugServerFactory()
-    ),
+    [
+      vscode.debug.registerDebugConfigurationProvider(
+        configurationType,
+        new ScalaConfigProvider()
+      ),
+      vscode.debug.registerDebugAdapterTrackerFactory(
+        configurationType,
+        new ScalaTrackerFactory(traces)
+      ),
+      vscode.debug.registerDebugAdapterDescriptorFactory(
+        configurationType,
+        new ScalaDebugServerFactory()
+      ),
+    ],
+    traces,
   ];
 }
 
@@ -46,6 +56,37 @@ export async function start(
 
       return vscode.debug.startDebugging(undefined, configuration);
     });
+}
+
+class ScalaTracker implements vscode.DebugAdapterTracker {
+  traces: Array<string>;
+  constructor(traces: Array<string>) {
+    this.traces = traces;
+  }
+
+  onDidSendMessage(msg: any): void {
+    if (msg.body && msg.body.category && msg.body.output) {
+      const category = msg.body.category as string;
+      const output = msg.body.output as string;
+      if (category == "stderr")
+        // TODO we should check if the line is a stacktrace
+        // && output.startsWith("Exception in thread"))
+        this.traces.push(output);
+    }
+  }
+}
+
+class ScalaTrackerFactory implements vscode.DebugAdapterTrackerFactory {
+  traces: Array<string>;
+  constructor(traces: Array<string>) {
+    this.traces = traces;
+  }
+  createDebugAdapterTracker(
+    _session: vscode.DebugSession
+  ): vscode.ProviderResult<vscode.DebugAdapterTracker> {
+    this.traces.length = 0;
+    return new ScalaTracker(this.traces);
+  }
 }
 
 class ScalaConfigProvider implements vscode.DebugConfigurationProvider {
@@ -190,4 +231,11 @@ export function debugServerFromUri(uri: string): vscode.DebugAdapterServer {
 export interface DebugSession {
   name: string;
   uri: string;
+}
+
+export interface DebugOutputEvent {
+  body: {
+    category: string;
+    output: string;
+  };
 }
