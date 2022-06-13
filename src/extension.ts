@@ -35,6 +35,7 @@ import {
   RevealOutputChannelOn,
   ExecuteCommandRequest,
   CancellationToken,
+  NotificationType,
 } from "vscode-languageclient/node";
 import { LazyProgress } from "./lazyProgress";
 import * as fs from "fs";
@@ -67,7 +68,7 @@ import {
 import * as metalsLanguageClient from "metals-languageclient";
 import { startTreeView } from "./treeview";
 import * as scalaDebugger from "./scalaDebugger";
-import { DecorationsRangesDidChange } from "./decorationProtocol";
+import { PublishDecorationsParams } from "./decorationProtocol";
 import { clearTimeout } from "timers";
 import { increaseIndentPattern } from "./indentPattern";
 import { gotoLocation, WindowLocation } from "./goToLocation";
@@ -1095,39 +1096,42 @@ function launchMetals(
       scalaDebugger.initialize(outputChannel).forEach((disposable) => {
         context.subscriptions.push(disposable);
       });
-      const decorationsRangesDidChangeDispoasable = client.onNotification(
-        DecorationsRangesDidChange.type,
-        (params) => {
-          const editors = window.visibleTextEditors;
-          const path = Uri.parse(params.uri).toString();
-          const workheetEditors = editors.filter(
-            (editor) => editor.document.uri.toString() == path
-          );
-          if (workheetEditors.length > 0) {
-            const options = params.options.map<DecorationOptions>((o) => {
-              return {
-                range: new Range(
-                  new Position(o.range.start.line, o.range.start.character),
-                  new Position(o.range.end.line, o.range.end.character)
-                ),
-                hoverMessage: o.hoverMessage?.value,
-                renderOptions: o.renderOptions,
-              };
-            });
-            workheetEditors.forEach((editor) => {
-              if (params.isInline) {
-                editor.setDecorations(inlineDecorationType, options);
-              } else {
-                editor.setDecorations(decorationType, options);
-              }
-            });
-          } else {
-            outputChannel.appendLine(
-              `Ignoring decorations for non-active document '${params.uri}'.`
+      const decorationsRangesDidChangeDispoasable =
+        client.onNotification<PublishDecorationsParams>(
+          new NotificationType<PublishDecorationsParams>(
+            "metals/publishDecorations"
+          ),
+          (params) => {
+            const editors = window.visibleTextEditors;
+            const path = Uri.parse(params.uri).toString();
+            const workheetEditors = editors.filter(
+              (editor) => editor.document.uri.toString() == path
             );
+            if (workheetEditors.length > 0) {
+              const options = params.options.map<DecorationOptions>((o) => {
+                return {
+                  range: new Range(
+                    new Position(o.range.start.line, o.range.start.character),
+                    new Position(o.range.end.line, o.range.end.character)
+                  ),
+                  hoverMessage: o.hoverMessage?.value,
+                  renderOptions: o.renderOptions,
+                };
+              });
+              workheetEditors.forEach((editor) => {
+                if (params.isInline) {
+                  editor.setDecorations(inlineDecorationType, options);
+                } else {
+                  editor.setDecorations(decorationType, options);
+                }
+              });
+            } else {
+              outputChannel.appendLine(
+                `Ignoring decorations for non-active document '${params.uri}'.`
+              );
+            }
           }
-        }
-      );
+        );
       context.subscriptions.push(decorationsRangesDidChangeDispoasable);
     },
     (reason) => {
