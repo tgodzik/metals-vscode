@@ -39,7 +39,7 @@ export function initialize(outputChannel: vscode.OutputChannel): Disposable[] {
 function isExtendedScalaRunMain(
   runMain: ScalaRunMain
 ): runMain is ExtendedScalaRunMain {
-  return runMain?.data?.kind === "scala-main-class";
+  return !!runMain?.data?.shellCommand;
 }
 
 async function runMain(main: ExtendedScalaRunMain): Promise<boolean> {
