@@ -17,7 +17,7 @@ import {
   RunType,
   ServerCommands,
 } from "metals-languageclient";
-import { ScalaRunMain } from "./testExplorer/types";
+import { ExtendedScalaRunMain, ScalaRunMain } from "./testExplorer/types";
 
 const configurationType = "scala";
 
@@ -36,29 +36,32 @@ export function initialize(outputChannel: vscode.OutputChannel): Disposable[] {
   ];
 }
 
-function isScalaRunMain(object: any): object is ScalaRunMain {
-  return object.dataKind === "scala-main-class";
+function isExtendedScalaRunMain(
+  runMain: ScalaRunMain
+): runMain is ExtendedScalaRunMain {
+  return runMain?.data?.kind === "scala-main-class";
 }
 
-function runMain(main: ScalaRunMain): Thenable<boolean> {
+async function runMain(main: ExtendedScalaRunMain): Promise<boolean> {
   if (workspace.workspaceFolders) {
-    const initialObj: { [key: string]: string } = {};
-    const env = main.data.environmentVariables.reduce((obj, e) => {
-      const split = e.split("=");
-      const key = split[0];
-      return (obj[key] = split[1]), obj;
-    }, initialObj);
-    return tasks
-      .executeTask(
-        new Task(
-          { type: "scala", task: "run" },
-          workspace.workspaceFolders[0],
-          "Scala run",
-          "Metals",
-          new ShellExecution(main.data.shellCommand, { env: env })
-        )
-      )
-      .then((_a) => true);
+    const env = main.data.environmentVariables.reduce<Record<string, string>>(
+      (acc, envKeyValue) => {
+        const [key, value] = envKeyValue.split("=");
+        return { ...acc, [key]: value };
+      },
+      {}
+    );
+
+    const task = new Task(
+      { type: "scala", task: "run" },
+      workspace.workspaceFolders[0],
+      "Scala run",
+      "Metals",
+      new ShellExecution(main.data.shellCommand, { env })
+    );
+
+    await tasks.executeTask(task);
+    return true;
   }
   return Promise.resolve(false);
 }
@@ -67,21 +70,9 @@ export async function start(
   noDebug: boolean,
   ...parameters: any[]
 ): Promise<boolean> {
-  if (noDebug) {
-    const main = parameters[0];
-    if (isScalaRunMain(main)) {
-      return runMain(main);
-    } else {
-      return vscode.commands
-        .executeCommand<ScalaRunMain>("discover-jvm-run-command", ...parameters)
-        .then((response) => {
-          if (response) {
-            return runMain(response);
-          } else {
-            return debug(noDebug, ...parameters);
-          }
-        });
-    }
+  const main = parameters[0];
+  if (noDebug && isExtendedScalaRunMain(main)) {
+    return runMain(main);
   } else {
     return debug(noDebug, ...parameters);
   }

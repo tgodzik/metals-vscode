@@ -84,7 +84,7 @@ import {
   getValueFromConfig,
 } from "./util";
 import { createTestManager } from "./testExplorer/testManager";
-import { BuildTargetUpdate } from "./testExplorer/types";
+import { BuildTargetUpdate, ScalaRunMain } from "./testExplorer/types";
 import * as workbenchCommands from "./workbenchCommands";
 import { getServerVersion } from "./getServerVersion";
 import { getCoursierMirrorPath } from "./mirrors";
@@ -553,6 +553,7 @@ function launchMetals(
       });
 
       registerCommand(ClientCommands.StartDebugSession, (...args: any[]) => {
+        console.log(args);
         scalaDebugger.start(false, ...args).then((wasStarted) => {
           if (!wasStarted) {
             window.showErrorMessage("Debug session not started");
@@ -560,13 +561,16 @@ function launchMetals(
         });
       });
 
-      registerCommand(ClientCommands.StartRunSession, (...args: any[]) => {
-        scalaDebugger.start(true, ...args).then((wasStarted) => {
-          if (!wasStarted) {
-            window.showErrorMessage("Run session not started");
-          }
-        });
-      });
+      registerCommand(
+        ClientCommands.StartRunSession,
+        (scalaRunMain: ScalaRunMain) => {
+          scalaDebugger.start(true, scalaRunMain).then((wasStarted) => {
+            if (!wasStarted) {
+              window.showErrorMessage("Run session not started");
+            }
+          });
+        }
+      );
 
       // should be the compilation of a currently opened file
       // but some race conditions may apply
