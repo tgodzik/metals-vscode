@@ -18,6 +18,7 @@ import {
 } from "metals-languageclient";
 import { ExtendedScalaRunMain, ScalaCodeLensesParams } from "./types";
 import { platform } from "os";
+import { RunDebugAdapter } from "./RunDebugAdapter";
 
 const configurationType = "scala";
 
@@ -95,7 +96,26 @@ export async function startDiscovery(
   noDebug: boolean,
   debugParams: DebugDiscoveryParams
 ): Promise<boolean> {
-  return debug(noDebug, debugParams);
+  if (
+    noDebug &&
+    debugParams.runType != RunType.TestFile &&
+    debugParams.runType != RunType.TestTarget
+  ) {
+    return vscode.commands
+      .executeCommand<ScalaCodeLensesParams>(
+        "discover-jvm-run-command",
+        debugParams
+      )
+      .then((response) => {
+        if (response && isExtendedScalaRunMain(response)) {
+          return runMain(response);
+        } else {
+          return debug(noDebug, debugParams);
+        }
+      });
+  } else {
+    return debug(noDebug, debugParams);
+  }
 }
 
 export async function start(
@@ -166,15 +186,34 @@ class ScalaDebugServerFactory implements vscode.DebugAdapterDescriptorFactory {
       session.configuration.testClass !== undefined ||
       session.configuration.hostName !== undefined
     ) {
-      const debugSession = await vscode.commands.executeCommand<DebugSession>(
-        ServerCommands.DebugAdapterStart,
-        session.configuration
-      );
-
-      if (debugSession === undefined) {
-        return null;
+      if (
+        session.configuration.mainClass !== undefined &&
+        session.configuration.noDebug
+      ) {
+        const debugParams =
+          await vscode.commands.executeCommand<ScalaCodeLensesParams>(
+            "discover-jvm-run-command",
+            session.configuration
+          );
+        if (debugParams && isExtendedScalaRunMain(debugParams)) {
+          runMain(debugParams);
+          return new vscode.DebugAdapterInlineImplementation(
+            new RunDebugAdapter()
+          );
+        } else {
+          // TODO revert to the next branch
+          return null;
+        }
       } else {
-        return debugServerFromUri(debugSession.uri);
+        const debugSession = await vscode.commands.executeCommand<DebugSession>(
+          ServerCommands.DebugAdapterStart,
+          session.configuration
+        );
+        if (debugSession === undefined) {
+          return null;
+        } else {
+          return debugServerFromUri(debugSession.uri);
+        }
       }
     }
     return null;

@@ -1043,7 +1043,8 @@
     "metals-languageclient": "0.5.18",
     "promisify-child-process": "4.1.1",
     "semver": "^7.3.8",
-    "vscode-languageclient": "8.0.2"
+    "vscode-languageclient": "8.0.2",
+    "@vscode/debugprotocol": "1.58.0"
   },
   "extensionPack": [
     "scala-lang.scala"
