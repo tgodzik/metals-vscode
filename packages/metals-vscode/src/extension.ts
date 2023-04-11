@@ -183,11 +183,14 @@ function fetchAndLaunchMetals(
     extensionPath: context.extensionPath,
   });
 
-  const fetchProcess = fetchMetals({
-    serverVersion,
-    serverProperties,
-    javaConfig,
-  });
+  const fetchProcess = fetchMetals(
+    {
+      serverVersion,
+      serverProperties,
+      javaConfig,
+    },
+    outputChannel
+  );
 
   const title = `Downloading Metals v${serverVersion}`;
   return trackDownloadProgress(title, outputChannel, fetchProcess).then(
