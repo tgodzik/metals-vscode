@@ -4,7 +4,6 @@ import fs from "fs";
 import { ChildProcessPromise, spawn } from "promisify-child-process";
 import { JavaConfig } from "./getJavaConfig";
 import { OutputChannel } from "./interfaces/OutputChannel";
-import { spawnSync } from "child_process";
 
 interface FetchMetalsOptions {
   serverVersion: string;
@@ -12,14 +11,14 @@ interface FetchMetalsOptions {
   javaConfig: JavaConfig;
 }
 
-export function fetchMetals(
+export async function fetchMetals(
   {
     serverVersion,
     serverProperties,
     javaConfig: { javaPath, javaOptions, extraEnv, coursierPath },
   }: FetchMetalsOptions,
   output: OutputChannel
-): ChildProcessPromise {
+): Promise<ChildProcessPromise> {
   const fetchProperties = serverProperties.filter(
     (p) => !p.startsWith("-agentlib")
   );
@@ -46,7 +45,7 @@ export function fetchMetals(
   const path = process.env["PATH"];
   let possibleCoursier: string | undefined;
   if (path) {
-    possibleCoursier = validateCoursier(path);
+    possibleCoursier = await validateCoursier(path);
   }
 
   function spawnDefault(): ChildProcessPromise {
@@ -78,7 +77,9 @@ export function fetchMetals(
   }
 }
 
-export function validateCoursier(pathEnv: string): string | undefined {
+export async function validateCoursier(
+  pathEnv: string
+): Promise<string | undefined> {
   const isWindows = process.platform === "win32";
   const possibleCoursier = pathEnv
     .split(path.delimiter)
@@ -99,8 +100,8 @@ export function validateCoursier(pathEnv: string): string | undefined {
         (isWindows && p.endsWith(path.sep + "cs.exe"))
     );
   if (possibleCoursier) {
-    const coursierVersion = spawnSync(possibleCoursier, ["version"]);
-    if (coursierVersion.status !== 0) {
+    const coursierVersion = await spawn(possibleCoursier, ["version"]);
+    if (coursierVersion.code !== 0) {
       return undefined;
     } else {
       return possibleCoursier;

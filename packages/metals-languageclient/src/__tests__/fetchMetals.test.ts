@@ -36,16 +36,16 @@ describe("fetchMetals", () => {
     });
   });
 
-  it("should find coursier in PATH", () => {
+  it("should find coursier in PATH", async () => {
     const pathEnv = process.env["PATH"];
     if (pathEnv) {
-      expect(validateCoursier(pathEnv)).toBeDefined();
+      expect(await validateCoursier(pathEnv)).toBeDefined();
     } else {
       fail("PATH environment variable is not defined");
     }
   });
 
-  it("should not find coursier if not present in PATH", () => {
-    expect(validateCoursier("path/fake")).toBeUndefined();
+  it("should not find coursier if not present in PATH", async () => {
+    expect(await validateCoursier("path/fake")).toBeUndefined();
   });
 });
