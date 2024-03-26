@@ -1,5 +1,7 @@
 export interface DebugDiscoveryParams {
-  path: string;
+  path: string | undefined;
+  mainClass: string | undefined;
+  buildTarget: string | undefined;
   runType: RunType;
 }
 

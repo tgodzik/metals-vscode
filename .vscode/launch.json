@@ -14,5 +14,14 @@
       "outFiles": ["${workspaceRoot}/packages/metals-vscode/out/**/*.js"],
       "preLaunchTask": "npm: watch"
     }
+    // {
+    //   "type": "scala",
+    //   "request": "launch",
+    //   "name": "Untitled",
+    //   "mainClass": "???",
+    //   "args": [],
+    //   "jvmOptions": [],
+    //   "env": {}
+    // }
   ]
 }

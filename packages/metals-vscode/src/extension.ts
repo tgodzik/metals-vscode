@@ -777,6 +777,8 @@ function launchMetals(
         const args: DebugDiscoveryParams = {
           path: editor.document.uri.toString(true),
           runType: RunType.RunOrTestFile,
+          buildTarget: undefined,
+          mainClass: undefined,
         };
         scalaDebugger.startDiscovery(true, args).then((wasStarted) => {
           if (!wasStarted) {
@@ -789,6 +791,8 @@ function launchMetals(
         const args: DebugDiscoveryParams = {
           path: editor.document.uri.toString(true),
           runType: RunType.TestTarget,
+          buildTarget: undefined,
+          mainClass: undefined,
         };
         scalaDebugger.startDiscovery(true, args).then((wasStarted) => {
           if (!wasStarted) {
