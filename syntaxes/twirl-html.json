@@ -1,10 +1,120 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "name": "Twirl HTML",
-  "scopeName": "text.html.twirl",
-  "patterns": [
-    {
-      "include": "text.html.basic"
+  "name": "twirl.html",
+  "scopeName": "source.twirl",
+  "fileTypes": ["*.scala.html", ".scala.html"],
+  "foldingStartMarker": "^[^\\S\r\n]*@\\*[^\\S\r\n]*[^\\S\r\n]*.*$",
+  "foldingStopMarker": "^[\\s]*\\*@[^\\S\\r\\n]*$",
+  "repository": {
+    "util-match-parens": {
+      "name": "meta.util.twirl.parens",
+      "begin": "\\(",
+      "end": "\\)",
+      "patterns": [
+        { "include": "#util-match-parens" },
+        { "include": "source.scala" }
+      ]
+    },
+    "util-match-curly": {
+      "name": "meta.util.twirl.curly",
+      "begin": "\\(",
+      "end": "\\)",
+      "patterns": [{ "include": "#util-match-curly" }, { "include": "$self" }]
+    },
+    "symbols-at": {
+      "name": "keyword.operator",
+      "match": "@"
+    },
+    "comment-block-twirl": {
+      "name": "comment.block",
+      "begin": "@\\*",
+      "end": "\\*@"
+    },
+    "comment-line-twirl": {
+      "name": "comment.line",
+      "match": "\/\/\/*.*"
+    },
+    "scala-inline": {
+      "applyEndPatternLast": 1,
+      "begin": "(@)",
+      "end": "(?=[\\n\\r;!#%&*+\\-<@>\/?\\^|~£§])",
+      "beginCaptures": {
+        "1": { "patterns": [{ "include": "#symbols-at" }] },
+        "2": { "patterns": [{ "include": "#comment-block-twirl" }] }
+      },
+      "patterns": [
+        { "include": "#util-match-parens" },
+        { "include": "#comment-block-twirl" },
+        { "include": "source.scala" }
+      ]
+    },
+    "scala-line": {
+      "begin": "(@)[\\w\\.]*\\(",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "patterns": [{ "include": "#symbols-at" }] }
+      },
+      "patterns": [
+        { "include": "#util-match-parens" },
+        { "include": "#symbols-at" },
+        { "include": "#comment-block-twirl" },
+        { "include": "source.scala" }
+      ]
+    },
+    "scala-line-curly": {
+      "begin": "(@)[^\\S\r\n]*\\{$",
+      "end": "(?=[\\n ;!#%&*+\\-<@>\/?\\^|~£§])",
+      "beginCaptures": {
+        "1": { "patterns": [{ "include": "#symbols-at" }] }
+      },
+      "patterns": [{ "include": "#util-match-curly" }, { "include": "$self" }]
+    },
+    "scala-block": {
+      "name": "meta.embedded.scala.source.block",
+      "begin": "(@)[\\w\\.]*\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "1": { "patterns": [{ "include": "#symbols-at" }] }
+      },
+      "patterns": [{ "include": "#util-match-curly" }, { "include": "$self" }]
+    },
+    "scala-expr": {
+      "name": "meta.embedded.scala.source.expr",
+      "begin": "(@)([\\w\\.]*)\\(",
+      "end": "\\)",
+      "beginCaptures": {
+        "1": { "patterns": [{ "include": "#symbols-at" }] },
+        "2": {
+          "patterns": [
+            { "include": "#keyword-this" },
+            { "include": "source.scala" }
+          ]
+        }
+      },
+      "patterns": [
+        { "include": "#util-match-parens" },
+        { "include": "#keyword-this" },
+        { "include": "source.scala" }
+      ]
+    },
+    "escape-at": {
+      "name": "string",
+      "match": "@@"
+    },
+    "keyword-this": {
+      "name": "keyword",
+      "match": "\\b(this)\\b"
     }
+  },
+  "patterns": [
+    { "include": "#escape-at" },
+    { "include": "#comment-line-twirl" },
+    { "include": "#comment-block-twirl" },
+    { "include": "#scala-expr" },
+    { "include": "#scala-line" },
+    { "include": "#scala-inline" },
+    { "include": "#scala-line-curly" },
+    { "include": "#symbols-at" },
+    { "include": "text.html.derivative" }
   ]
 }
