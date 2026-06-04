@@ -905,6 +905,10 @@ async function launchMetals(
         commands.executeCommand(workbenchCommands.focusDiagnostics),
       );
 
+      registerCommand(ClientCommands.GotoLog, () =>
+        commands.executeCommand(ServerCommands.GotoLog),
+      );
+
       registerCommand(ClientCommands.RunDoctor, async () => {
         await doctorProvider.runDoctor();
       });

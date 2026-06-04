@@ -939,6 +939,11 @@
         "command": "metals.find-text-in-dependency-jars",
         "category": "Metals",
         "title": "Find text in dependency JAR files"
+      },
+      {
+        "command": "metals-logs-goto",
+        "category": "Metals",
+        "title": "Go to Metals logs in .metals/metals.log"
       }
     ],
     "submenus": [
@@ -1035,6 +1040,10 @@
         },
         {
           "command": "metals.toggle-named-parameters",
+          "when": "metals:enabled"
+        },
+        {
+          "command": "metals-logs-goto",
           "when": "metals:enabled"
         },
         {

@@ -86,6 +86,8 @@ export const ServerCommands = {
   GotoPosition: "goto-position",
   /** Jumps to the super method/field definition of a symbol. */
   GotoSuperMethod: "goto-super-method",
+  /** Focus on the logs in .metals/metals.log */
+  GotoLog: "goto-log",
   /**
    * Create and open a new Scala class, object, trait, package object, or
    * worksheet.

@@ -45,6 +45,8 @@ export const ClientCommands = {
    * `window/logMessage`.
    */
   ToggleLogs: "metals-logs-toggle",
+  /** Focus on the logs in .metals/metals.log */
+  GotoLog: "metals-logs-goto",
   /**
    * Connect or reconnect to build server.
    */
