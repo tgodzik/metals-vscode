@@ -35,6 +35,8 @@ import {
   DebugSessionCustomEvent,
   ThemeColor,
   LogOutputChannel,
+  lm,
+  LanguageModelChatMessage,
 } from "vscode";
 import {
   LanguageClient,
@@ -119,6 +121,11 @@ import {
 import { MetalsQuickPickType } from "./interfaces/MetalsQuickPick";
 import { MetalsReadClipboardType } from "./interfaces/MetalsReadClipboard";
 import { MetalsSlowTaskType } from "./interfaces/MetalsSlowTask";
+import {
+  MetalsLanguageModelRequestType,
+  MetalsLanguageModelParams,
+  MetalsLanguageModelResult,
+} from "./interfaces/MetalsLanguageModelRequest";
 import { downloadProgress } from "./downloadProgress";
 import { detectLaunchConfigurationChanges } from "./detectLaunchConfigurationChanges";
 import { registerCopyPasteHooks } from "./metalsCopyPaste";
@@ -679,6 +686,7 @@ async function launchMetalsWithServerOptions(
     doctorVisibilityProvider: true,
     bspStatusBarProvider: "on",
     moduleStatusBarProvider: "on",
+    languageModelRequestProvider: true,
   };
 
   const protobufLsp = config.get<boolean>("protobufLsp") ?? true;
@@ -1569,6 +1577,57 @@ async function launchMetalsWithServerOptions(
           return { value: null };
         }
       });
+
+      client.onRequest(
+        MetalsLanguageModelRequestType,
+        async (
+          params: MetalsLanguageModelParams,
+        ): Promise<MetalsLanguageModelResult> => {
+          try {
+            const modelSelector = params.modelFamily
+              ? { family: params.modelFamily }
+              : {};
+            const models = await lm.selectChatModels(modelSelector);
+
+            if (!models || models.length === 0) {
+              return {
+                error:
+                  "No language model available. Please ensure GitHub Copilot or another language model provider is installed and signed in.",
+              };
+            }
+
+            const model = models[0];
+            const messages: LanguageModelChatMessage[] = [];
+
+            if (params.systemPrompt) {
+              messages.push(LanguageModelChatMessage.User(params.systemPrompt));
+            }
+
+            for (const msg of params.messages) {
+              if (msg.role === "user") {
+                messages.push(LanguageModelChatMessage.User(msg.content));
+              } else {
+                messages.push(LanguageModelChatMessage.Assistant(msg.content));
+              }
+            }
+
+            const response = await model.sendRequest(messages, {});
+            let responseText = "";
+            for await (const chunk of response.text) {
+              responseText += chunk;
+            }
+
+            return { text: responseText };
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            outputChannel.appendLine(
+              `Language model request failed: ${errorMessage}`,
+            );
+            return { error: errorMessage };
+          }
+        },
+      );
 
       // Long running tasks such as "import project" trigger start a progress
       // bar with a "cancel" button.
